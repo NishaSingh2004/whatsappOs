@@ -17,7 +17,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 router = APIRouter()
-ai_client = genai.Client(api_key=settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY" else None
+ai_client = genai.Client(api_key=settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "YOUR_GEMINI_API_KEY" else None
 
 def send_chat_notification_email(sender_name: str, org_users: list[User], message_content: str):
     try:
