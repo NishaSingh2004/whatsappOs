@@ -1,21 +1,21 @@
 export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Global Users</h1>
           <p className="text-sm text-gray-400 mt-1">Manage platform users across all tenants.</p>
         </div>
-        <div className="flex space-x-3">
-           <input type="text" placeholder="Search users by email..." className="w-64 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50" />
-           <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-sm font-medium rounded-lg border border-white/10 transition-colors">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
+           <input type="text" placeholder="Search users by email..." className="w-full sm:w-64 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50" />
+           <button className="w-full sm:w-auto px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-sm font-medium rounded-lg border border-white/10 transition-colors">
              Export CSV
            </button>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-[#0f0f11] overflow-hidden shadow-xl">
-        <table className="w-full text-left border-collapse">
+      <div className="rounded-xl border border-white/10 bg-[#0f0f11] shadow-xl overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
             <tr className="border-b border-white/10 bg-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider">
               <th className="px-6 py-4">User</th>

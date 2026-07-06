@@ -169,7 +169,7 @@ export default function ChatPage() {
                   <span className="text-xs text-gray-500">{msg.time}</span>
                 </div>
                 
-                <div className={`p-4 rounded-2xl shadow-sm leading-relaxed ${
+                <div className={`p-4 rounded-2xl shadow-sm leading-relaxed break-words ${
                   msg.isMe 
                     ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-tr-none' 
                     : msg.role === 'assistant' ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-tl-none' : 'bg-white/5 border border-white/10 text-gray-200 rounded-tl-none'

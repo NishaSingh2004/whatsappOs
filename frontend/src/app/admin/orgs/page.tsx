@@ -65,7 +65,7 @@ export default function AdminOrgsPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-[#0f0f11] overflow-hidden shadow-xl">
+      <div className="rounded-xl border border-white/10 bg-[#0f0f11] shadow-xl overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-white/10 bg-white/5 text-xs text-gray-400 font-medium uppercase tracking-wider">
@@ -114,7 +114,7 @@ export default function AdminOrgsPage() {
               
               <div className="space-y-4 border-b border-white/5 pb-4">
                 <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Company Details</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-400 mb-1">Organization Name</label>
                     <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" />
@@ -128,7 +128,7 @@ export default function AdminOrgsPage() {
 
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider">Admin User Details</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-400 mb-1">First Name</label>
                     <input required type="text" value={formData.admin_first_name} onChange={e => setFormData({...formData, admin_first_name: e.target.value})} className="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" />

@@ -9,6 +9,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -54,8 +55,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex">
+      {/* Mobile overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 bg-[#0f0f11] flex flex-col hidden md:flex">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-[#0f0f11] flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center px-6 border-b border-white/10">
           <div className="w-8 h-8 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-3">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -70,6 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link 
               key={item.name} 
               href={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
               className={`flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${pathname === item.href ? 'bg-indigo-500/10 text-indigo-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               <div className={`w-5 h-5 mr-3 rounded flex items-center justify-center ${pathname === item.href ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
@@ -103,18 +113,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 flex items-center justify-between px-8 border-b border-white/10 bg-[#0f0f11]/80 backdrop-blur-md">
-          <h2 className="text-lg font-medium text-gray-200">
-            {navItems.find(i => i.href === pathname)?.name || "Dashboard"}
-          </h2>
+      <main className="flex-1 flex flex-col overflow-hidden w-full">
+        <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-white/10 bg-[#0f0f11]/80 backdrop-blur-md">
+          <div className="flex items-center space-x-3">
+             <button 
+               className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white"
+               onClick={() => setIsMobileMenuOpen(true)}
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+             </button>
+             <h2 className="text-lg font-medium text-gray-200 truncate">
+               {navItems.find(i => i.href === pathname)?.name || "Dashboard"}
+             </h2>
+          </div>
           <div className="flex items-center space-x-4">
              <div className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
                System Status: Operational
              </div>
           </div>
         </header>
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto p-4 md:p-8">
           {children}
         </div>
       </main>
