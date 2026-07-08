@@ -20,3 +20,8 @@ class OrgResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class OrgUpdate(BaseModel):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    is_active: Optional[bool] = None

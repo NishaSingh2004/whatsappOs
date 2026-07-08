@@ -25,3 +25,12 @@ class InviteResponse(BaseModel):
 class RegisterUser(BaseModel):
     token: str
     password: str
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class GlobalUserResponse(UserResponse):
+    org_name: Optional[str] = None

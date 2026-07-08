@@ -4,10 +4,18 @@ import { useState, useEffect } from "react";
 export default function AdminOrgsPage() {
   const [orgs, setOrgs] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<any>(null);
+  
   const [formData, setFormData] = useState({ 
     name: "", slug: "", plan: "Enterprise", 
     admin_email: "", admin_first_name: "", admin_last_name: "", admin_password: "" 
   });
+  
+  const [manageData, setManageData] = useState({
+    name: "", slug: "", is_active: true
+  });
+  
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -48,6 +56,62 @@ export default function AdminOrgsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/orgs/${selectedOrg.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(manageData)
+      });
+      if (res.ok) {
+        setShowManageModal(false);
+        fetchOrgs();
+      } else {
+        const error = await res.json();
+        alert(error.detail || "Failed to update organization");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this organization and ALL its users? This cannot be undone.")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/orgs/${selectedOrg.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      if (res.ok) {
+        setShowManageModal(false);
+        fetchOrgs();
+      } else {
+        const error = await res.json();
+        alert(error.detail || "Failed to delete organization");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openManageModal = (org: any) => {
+    setSelectedOrg(org);
+    setManageData({ name: org.name, slug: org.slug, is_active: org.is_active });
+    setShowManageModal(true);
   };
 
   return (
@@ -93,7 +157,7 @@ export default function AdminOrgsPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button className="text-indigo-400 hover:text-indigo-300 font-medium mr-4">View Details</button>
+                  <button onClick={() => openManageModal(org)} className="text-indigo-400 hover:text-indigo-300 font-medium mr-4">View Details</button>
                 </td>
               </tr>
             ))}
@@ -153,6 +217,44 @@ export default function AdminOrgsPage() {
                 <button type="submit" disabled={loading} className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(99,102,241,0.3)]">
                   {loading ? "Creating..." : "Create Organization & Admin"}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showManageModal && selectedOrg && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#15151a] border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl my-8">
+            <h2 className="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">Manage Organization</h2>
+            <form onSubmit={handleUpdate} className="space-y-5">
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Organization Name</label>
+                <input required type="text" value={manageData.name} onChange={e => setManageData({...manageData, name: e.target.value})} className="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Tenant Slug (URL)</label>
+                <input required type="text" value={manageData.slug} onChange={e => setManageData({...manageData, slug: e.target.value})} className="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Status</label>
+                <select value={manageData.is_active ? "true" : "false"} onChange={e => setManageData({...manageData, is_active: e.target.value === "true"})} className="w-full px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none">
+                  <option value="true">Active</option>
+                  <option value="false">Suspended</option>
+                </select>
+              </div>
+
+              <div className="pt-6 flex justify-between items-center border-t border-white/10">
+                <button type="button" onClick={handleDelete} disabled={loading} className="px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
+                   Delete Org
+                </button>
+                <div className="flex space-x-3">
+                  <button type="button" onClick={() => setShowManageModal(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+                  <button type="submit" disabled={loading} className="px-6 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                    {loading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

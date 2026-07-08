@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from core.database import get_db
 from models.user import User, RoleEnum
-from schemas.user import UserInvite, UserResponse, InviteResponse, RegisterUser
+from schemas.user import UserInvite, UserResponse, InviteResponse, RegisterUser, GlobalUserResponse, UserUpdate
 from api.deps import get_current_user
 from core.security import get_password_hash, create_access_token, decode_access_token
 from core.security import get_password_hash
@@ -103,3 +103,53 @@ def register_user(reg: RegisterUser, db: Session = Depends(get_db)):
 @router.get("", response_model=list[UserResponse])
 def get_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return db.query(User).filter(User.org_id == current_user.org_id).all()
+
+@router.get("/global", response_model=list[GlobalUserResponse])
+def get_global_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != RoleEnum.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    users = db.query(User).all()
+    results = []
+    for u in users:
+        org_name = u.organization.name if u.organization else "WorkOS Global"
+        user_dict = UserResponse.model_validate(u).model_dump()
+        user_dict['org_name'] = org_name
+        results.append(user_dict)
+    return results
+
+@router.put("/{user_id}", response_model=UserResponse)
+def update_user(user_id: str, user_in: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != RoleEnum.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if user_in.first_name is not None:
+        user.first_name = user_in.first_name
+    if user_in.last_name is not None:
+        user.last_name = user_in.last_name
+    if user_in.role is not None:
+        user.role = RoleEnum(user_in.role)
+    if user_in.is_active is not None:
+        user.is_active = user_in.is_active
+        
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/{user_id}")
+def delete_user(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != RoleEnum.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+        
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    db.delete(user)
+    db.commit()
+    return {"status": "success", "message": "User deleted"}
+
