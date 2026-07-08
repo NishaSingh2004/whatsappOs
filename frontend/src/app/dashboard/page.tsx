@@ -79,9 +79,9 @@ export default function TenantDashboard() {
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: "Active Projects", value: "12", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-              { label: "My Tasks", value: "8", color: "text-blue-400", bg: "bg-blue-500/10" },
-              { label: "Unread Messages", value: "24", color: "text-purple-400", bg: "bg-purple-500/10" },
+              { label: "Active Projects", value: "0", color: "text-emerald-400", bg: "bg-emerald-500/10" },
+              { label: "My Tasks", value: "0", color: "text-blue-400", bg: "bg-blue-500/10" },
+              { label: "Unread Messages", value: "0", color: "text-purple-400", bg: "bg-purple-500/10" },
             ].map((stat, i) => (
               <div key={i} className="p-5 rounded-xl border border-white/10 bg-[#0f0f11] shadow-lg">
                 <p className="text-sm text-gray-400 mb-1">{stat.label}</p>
@@ -99,32 +99,9 @@ export default function TenantDashboard() {
                 <a href="/dashboard/projects" className="text-sm text-gray-400 hover:text-white">View All</a>
              </div>
              <div className="divide-y divide-white/5">
-                {[
-                  { name: "Q3 Marketing Campaign", status: "In Progress", progress: 65, team: 4 },
-                  { name: "Website Redesign", status: "Review", progress: 90, team: 6 },
-                  { name: "API Integration v2", status: "Planning", progress: 15, team: 3 },
-                ].map((proj, i) => (
-                  <div key={i} className="p-5 hover:bg-white/[0.02] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-medium text-gray-200">{proj.name}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{proj.team} members assigned</p>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="w-32">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-gray-400">{proj.status}</span>
-                          <span className="text-emerald-400">{proj.progress}%</span>
-                        </div>
-                        <div className="w-full bg-white/10 rounded-full h-1.5">
-                          <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${proj.progress}%` }}></div>
-                        </div>
-                      </div>
-                      <button className="text-gray-500 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <div className="p-5 text-center text-sm text-gray-500">
+                  No active projects to display.
+                </div>
              </div>
           </div>
         </div>
@@ -142,10 +119,8 @@ export default function TenantDashboard() {
                   <p className="text-xs text-emerald-400">Online</p>
                 </div>
              </div>
-             <div className="flex-1 p-4 overflow-y-auto space-y-4">
-                <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-gray-300 w-10/12">
-                   Hello! I've analyzed your Jira tasks for today. You have 2 high-priority bugs to fix in the Website Redesign project.
-                </div>
+             <div className="flex-1 p-4 overflow-y-auto space-y-4 flex flex-col items-center justify-center">
+                <p className="text-sm text-gray-500">No new messages from AI.</p>
              </div>
              <div className="p-3 border-t border-white/10 bg-black/20">
                 <a href="/dashboard/chat" className="block text-center text-sm text-emerald-400 hover:text-emerald-300 font-medium py-2">
