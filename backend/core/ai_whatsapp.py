@@ -11,7 +11,9 @@ class WhatsAppAIAssistant:
         self.db = db
         self.org_id = org_id
         self.profile_name = profile_name
-        self.client = genai.Client(api_key=app_settings.GEMINI_API_KEY)
+        self.client = None
+        if app_settings.GEMINI_API_KEY:
+            self.client = genai.Client(api_key=app_settings.GEMINI_API_KEY)
         
         # Load Jira settings
         self.org_settings = self.db.query(Settings).filter(Settings.org_id == org_id).first()
@@ -55,6 +57,9 @@ class WhatsAppAIAssistant:
             return f"Failed to list Jira issues: {str(e)}"
 
     async def process_message(self, user_message: str) -> str:
+        if not self.client:
+            return "Hi! I am the WorkOS Assistant. Please ask your admin to configure the Gemini AI API Key so I can help you with Jira!"
+
         system_instruction = (
             f"You are a helpful WorkOS Assistant responding to {self.profile_name} on WhatsApp. "
             f"You can help them create Jira tickets, list recent tickets, or answer general questions. "
