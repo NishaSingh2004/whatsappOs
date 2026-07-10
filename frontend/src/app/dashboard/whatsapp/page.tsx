@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function WhatsAppIntegrationPage() {
   const [activeTab, setActiveTab] = useState<"official" | "experimental">("official");
@@ -43,13 +44,53 @@ export default function WhatsAppIntegrationPage() {
     }, 1000);
   };
 
+  const wsRef = useRef<WebSocket | null>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+
   const handleGenerateQR = () => {
     setLoading(true);
-    setTimeout(() => {
-      setExperimentalStatus("Waiting for QR Scan");
+    setExperimentalStatus("Waiting for QR Scan");
+    setQrData(null);
+    
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    
+    // Connect to WebSocket
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const wsUrl = apiUrl.replace(/^http/, 'ws') + '/api/v1/whatsapp/ws/qr';
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'status') {
+        if (data.message === 'Connected') {
+          setExperimentalStatus("Connected");
+          setQrData(null);
+        } else if (data.message === 'Session Expired') {
+          setExperimentalStatus("Session Expired");
+        } else {
+          setExperimentalStatus("Waiting for QR Scan");
+        }
+      } else if (data.type === 'qr_code') {
+        setQrData(data.data);
+        setLoading(false);
+      }
+    };
+    
+    ws.onerror = () => {
       setLoading(false);
-    }, 1000);
+      setExperimentalStatus("Logged Out");
+    };
   };
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, []);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -260,11 +301,16 @@ export default function WhatsAppIntegrationPage() {
                      <div className="w-64 h-64 border-2 border-dashed border-white/10 rounded-xl bg-black/50 flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden">
                         {experimentalStatus === "Waiting for QR Scan" ? (
                           <>
-                            <div className="w-48 h-48 bg-white p-2 rounded-lg opacity-80">
-                               {/* Placeholder for QR Code */}
-                               <div className="w-full h-full bg-[url('https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg')] bg-contain bg-center bg-no-repeat mix-blend-multiply opacity-50"></div>
+                            <div className="w-48 h-48 bg-white p-2 rounded-lg">
+                               {qrData ? (
+                                 <QRCodeSVG value={qrData} size={176} />
+                               ) : (
+                                 <div className="w-full h-full flex flex-col items-center justify-center space-y-3">
+                                   <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                                   <p className="text-xs text-gray-500 font-medium">Fetching QR...</p>
+                                 </div>
+                               )}
                             </div>
-                            <div className="absolute inset-0 bg-blue-500/10 animate-pulse"></div>
                           </>
                         ) : experimentalStatus === "Connected" ? (
                           <div className="text-emerald-400 flex flex-col items-center">

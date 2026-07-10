@@ -13,3 +13,5 @@ redis
 google-genai
 httpx
 email-validator
+playwright
+websockets
