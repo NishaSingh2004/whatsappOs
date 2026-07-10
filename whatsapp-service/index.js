@@ -1,10 +1,10 @@
-const express = require('express');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino');
-const cors = require('cors');
-const fs = require('fs');
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+import pino from 'pino';
+import cors from 'cors';
+import fs from 'fs';
 
 const app = express();
 app.use(cors());
@@ -22,25 +22,31 @@ const sessions = new Map();
 
 // Helper to initialize a Baileys session for a given org_id
 async function initSession(org_id, socketClient) {
+  console.log(`initSession called for ${org_id}`);
   const sessionDir = `./sessions/org_${org_id}`;
   
   // Initialize multi-file auth state
+  console.log(`Getting auth state from ${sessionDir}`);
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+  console.log(`Auth state initialized`);
 
   const sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
-    logger: pino({ level: 'silent' }), // Suppress detailed logs for cleanliness
+    logger: pino({ level: 'trace' }), // Enable logs to see what's happening
   });
+  console.log(`Socket created`);
 
   // Save credentials on updates
   sock.ev.on('creds.update', saveCreds);
 
   // Handle connection updates
   sock.ev.on('connection.update', (update) => {
+    console.log('Connection update for', org_id, ':', JSON.stringify(update));
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      console.log('QR Code received for', org_id);
       // Forward the raw QR code string to the connected frontend client
       if (socketClient) {
         socketClient.emit('qr_code', { org_id, qr });
@@ -55,7 +61,11 @@ async function initSession(org_id, socketClient) {
         if (!shouldReconnect) {
           socketClient.emit('status', { org_id, status: 'Logged Out' });
           // If explicitly logged out, remove session files
-          fs.rmSync(sessionDir, { recursive: true, force: true });
+          try {
+            fs.rmSync(sessionDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+          } catch (e) {
+            console.error(`Failed to delete session directory ${sessionDir}:`, e.message);
+          }
           sessions.delete(org_id);
         } else {
           socketClient.emit('status', { org_id, status: 'Disconnected - Reconnecting' });
@@ -68,6 +78,52 @@ async function initSession(org_id, socketClient) {
       if (socketClient) {
         socketClient.emit('status', { org_id, status: 'Connected' });
       }
+    }
+  });
+
+  // Handle incoming messages
+  sock.ev.on('messages.upsert', async (m) => {
+    try {
+      const msg = m.messages[0];
+      if (!msg.message || msg.key.fromMe) return; // Ignore if from ourselves
+
+      // Check if it's a direct message (not a group)
+      const remoteJid = msg.key.remoteJid;
+      if (remoteJid.endsWith('@g.us')) return;
+
+      const messageText = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+      const pushName = msg.pushName;
+      const phoneNumber = remoteJid.split('@')[0];
+
+      console.log(`Received message from ${phoneNumber} for org_${org_id}: ${messageText}`);
+
+      // Forward to FastAPI webhook
+      const webhookUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${webhookUrl}/api/v1/whatsapp/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          org_id: org_id,
+          phone_number: phoneNumber,
+          profile_name: pushName || null,
+          message: messageText
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.reply) {
+          // Send automated reply
+          await sock.sendMessage(remoteJid, { text: data.reply });
+        }
+      } else {
+        console.error(`Webhook failed with status: ${response.status}`);
+      }
+
+    } catch (err) {
+      console.error('Error handling incoming message:', err);
     }
   });
 
@@ -109,8 +165,12 @@ io.on('connection', (socket) => {
       sessions.delete(org_id);
     }
     const sessionDir = `./sessions/org_${org_id}`;
-    if (fs.existsSync(sessionDir)) {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(sessionDir)) {
+        fs.rmSync(sessionDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+      }
+    } catch (e) {
+      console.error(`Failed to delete session directory ${sessionDir}:`, e.message);
     }
     socket.emit('status', { org_id, status: 'Logged Out' });
   });

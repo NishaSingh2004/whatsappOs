@@ -1,17 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-// Mock Data
-const MOCK_MEMBERS = [
-  { id: "1", name: "Alice Johnson", empId: "EMP-001", phone: "+1234567890", department: "Engineering", role: "EMPLOYEE", status: "Active", integrationStatus: "Connected", lastSeen: "2 mins ago", joined: "2026-05-10" },
-  { id: "2", name: "Bob Smith", empId: "EMP-002", phone: "+1987654321", department: "Marketing", role: "MANAGER", status: "Active", integrationStatus: "Not Connected", lastSeen: "1 hr ago", joined: "2026-06-15" },
-  { id: "3", name: "Charlie Davis", empId: "EMP-003", phone: "+1122334455", department: "Sales", role: "EMPLOYEE", status: "Suspended", integrationStatus: "Disconnected", lastSeen: "3 days ago", joined: "2026-07-01" },
-];
+const MOCK_MEMBERS = []; // Removed
 
 const ROLES = ["EMPLOYEE", "MANAGER", "ORG_ADMIN", "TEAM_LEAD"];
 
 export default function WhatsAppMembersPage() {
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"added" | "invite">("added");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteData, setInviteData] = useState({ name: "", empId: "", phone: "", department: "", team: "", designation: "", role: "EMPLOYEE" });
@@ -24,7 +21,33 @@ export default function WhatsAppMembersPage() {
   // Member profile state
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+
   const filteredRoles = ROLES.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase()));
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/v1/whatsapp/members`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data.members || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch WhatsApp members:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +93,10 @@ export default function WhatsAppMembersPage() {
                   Filters
                 </button>
              </div>
-             <button className="px-4 py-2 bg-white/5 border border-white/10 text-white text-sm font-medium rounded-lg hover:bg-white/10">
+             <button onClick={fetchMembers} className="px-4 py-2 bg-white/5 border border-white/10 text-white text-sm font-medium rounded-lg hover:bg-white/10">
+               Refresh
+             </button>
+             <button className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                Export CSV
              </button>
           </div>
@@ -90,12 +116,16 @@ export default function WhatsAppMembersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 text-sm">
-                {MOCK_MEMBERS.map((member) => (
+                {loading ? (
+                  <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-500">Loading members...</td></tr>
+                ) : members.length === 0 ? (
+                  <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-500">No members connected yet. Have an employee scan the QR to start a chat!</td></tr>
+                ) : members.map((member) => (
                   <tr key={member.id} className="hover:bg-white/[0.02] transition-colors cursor-pointer group" onClick={() => setSelectedMember(member)}>
                     <td className="px-6 py-4 font-medium text-gray-200">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-400 flex items-center justify-center mr-3 font-bold border border-emerald-500/30">
-                          {member.name[0]}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-400 flex items-center justify-center mr-3 font-bold border border-emerald-500/30 uppercase">
+                          {member.name[0] || '?'}
                         </div>
                         {member.name}
                       </div>
@@ -123,9 +153,6 @@ export default function WhatsAppMembersPage() {
                           <button className="text-gray-400 hover:text-white" title="Edit" onClick={(e) => e.stopPropagation()}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                           </button>
-                          <button className="text-gray-400 hover:text-white" title="Send Invite Again" onClick={(e) => e.stopPropagation()}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                          </button>
                           <button className="text-red-400 hover:text-red-300" title="Remove" onClick={(e) => e.stopPropagation()}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
@@ -136,7 +163,7 @@ export default function WhatsAppMembersPage() {
               </tbody>
             </table>
             <div className="p-4 border-t border-white/10 flex justify-between items-center text-sm text-gray-400">
-               <span>Showing 1 to 3 of 3 members</span>
+               <span>Showing {members.length} members</span>
                <div className="flex space-x-2">
                  <button className="px-3 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-50" disabled>Prev</button>
                  <button className="px-3 py-1 rounded border border-white/10 hover:bg-white/5 disabled:opacity-50" disabled>Next</button>
