@@ -1,59 +1,28 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_USER: workos
-      POSTGRES_PASSWORD: workos_password
-      POSTGRES_DB: workos_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
   backend:
-    build:
+    build: 
       context: ./backend
-      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://workos:workos_password@postgres:5432/workos_db
-      - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=development-secret-key
-      - JWT_REFRESH_SECRET=development-refresh-secret
-      - ENVIRONMENT=development
-      - CORS_ORIGINS=http://localhost:3000
-    depends_on:
-      - postgres
-      - redis
-
-  frontend:
-    image: node:20-alpine
-    working_dir: /app
+      - ENVIRONMENT=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
-      - ./frontend:/app
-    ports:
-      - "3000:3000"
-    command: npm run dev
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NEXT_PUBLIC_NODE_URL=http://localhost:3001
+      - ./backend/workos.db:/app/workos.db
+    restart: unless-stopped
 
   whatsapp-service:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ./whatsapp-service:/app
+    build:
+      context: ./whatsapp-service
+      dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    command: npm start
-
-volumes:
-  postgres_data:
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    volumes:
+      - ./whatsapp-service/sessions:/app/sessions
+    restart: unless-stopped
+    depends_on:
+      - backend
