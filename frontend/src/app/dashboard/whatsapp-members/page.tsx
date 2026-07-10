@@ -21,8 +21,6 @@ export default function WhatsAppMembersPage() {
   // Member profile state
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
-  const [selectedMember, setSelectedMember] = useState<any>(null);
-
   const filteredRoles = ROLES.filter(r => r.toLowerCase().includes(roleSearch.toLowerCase()));
 
   const fetchMembers = async () => {
