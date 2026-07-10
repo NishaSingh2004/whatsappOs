@@ -44,6 +44,16 @@ services:
     command: npm run dev
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_NODE_URL=http://localhost:3001
+
+  whatsapp-service:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./whatsapp-service:/app
+    ports:
+      - "3001:3001"
+    command: npm start
 
 volumes:
   postgres_data:

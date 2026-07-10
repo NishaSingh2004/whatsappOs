@@ -1,9 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function SuperAdminWhatsAppPage() {
   const [activeTab, setActiveTab] = useState<"official" | "experimental" | "architecture">("official");
+  const [orgs, setOrgs] = useState<any[]>([]);
+  
+  // Socket and modal state
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<any>(null);
+  const [qrData, setQrData] = useState<string | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<string>("Logged Out");
+  const socketRef = useRef<Socket | null>(null);
+
+  useEffect(() => {
+    fetchOrgs();
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
+  }, []);
+
+  const fetchOrgs = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+      const res = await fetch(`${apiUrl}/api/v1/orgs`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (res.ok) setOrgs(await res.json());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const openQRModal = (org: any) => {
+    setSelectedOrg(org);
+    setQrData(null);
+    setSessionStatus("Connecting...");
+    setShowQRModal(true);
+
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    const nodeUrl = process.env.NEXT_PUBLIC_NODE_URL || 'http://127.0.0.1:3001';
+    const socket = io(nodeUrl);
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("start_session", { org_id: org.id });
+    });
+
+    socket.on("status", (data: any) => {
+      if (data.org_id === org.id) {
+        setSessionStatus(data.status);
+        if (data.status === "Connected") {
+          setQrData(null);
+        }
+      }
+    });
+
+    socket.on("qr_code", (data: any) => {
+      if (data.org_id === org.id) {
+        setQrData(data.qr);
+        setSessionStatus("Waiting for Scan");
+      }
+    });
+  };
+
+  const closeQRModal = () => {
+    setShowQRModal(false);
+    setSelectedOrg(null);
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+  };
+
+  const disconnectSession = (orgId: number) => {
+    const nodeUrl = process.env.NEXT_PUBLIC_NODE_URL || 'http://127.0.0.1:3001';
+    const tempSocket = io(nodeUrl);
+    tempSocket.on("connect", () => {
+      tempSocket.emit("logout_session", { org_id: orgId });
+      setTimeout(() => tempSocket.disconnect(), 1000);
+    });
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -132,32 +213,28 @@ export default function SuperAdminWhatsAppPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
-                      <tr className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-3 font-mono text-gray-300">sess_8f92j1</td>
-                        <td className="px-4 py-3 text-gray-200">Stark Industries</td>
-                        <td className="px-4 py-3 text-gray-400">+19876543210</td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Connected</span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500">2 hours ago</td>
-                        <td className="px-4 py-3 flex space-x-2">
-                          <button className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white rounded text-xs transition-colors border border-white/10">Refresh</button>
-                          <button className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs transition-colors border border-red-500/20">Disconnect</button>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-white/[0.02]">
-                        <td className="px-4 py-3 font-mono text-gray-300">sess_4a29k9</td>
-                        <td className="px-4 py-3 text-gray-200">Wayne Ent</td>
-                        <td className="px-4 py-3 text-gray-400">+11223344556</td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">Expired</span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500">3 days ago</td>
-                        <td className="px-4 py-3 flex space-x-2">
-                          <button className="px-3 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded text-xs transition-colors border border-indigo-500/30">Generate QR</button>
-                          <button className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs transition-colors border border-red-500/20">Disconnect</button>
-                        </td>
-                      </tr>
+                      {orgs.map((org, i) => (
+                        <tr key={i} className="hover:bg-white/[0.02]">
+                          <td className="px-4 py-3 font-mono text-gray-300">{org.id}</td>
+                          <td className="px-4 py-3 text-gray-200 font-medium">{org.name}</td>
+                          <td className="px-4 py-3 text-gray-400">{org.slug}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${org.is_active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                              {org.is_active ? "Active" : "Suspended"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">N/A</td>
+                          <td className="px-4 py-3 flex space-x-2">
+                            <button onClick={() => openQRModal(org)} className="px-3 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded text-xs transition-colors border border-indigo-500/30">Generate QR</button>
+                            <button onClick={() => disconnectSession(org.id)} className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs transition-colors border border-red-500/20">Force Disconnect</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {orgs.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No organizations found. Register one in the Organizations tab.</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -243,6 +320,43 @@ export default function SuperAdminWhatsAppPage() {
                </div>
              </div>
            </div>
+        </div>
+      )}
+      {/* QR Code Modal for Super Admin */}
+      {showQRModal && selectedOrg && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#15151a] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl flex flex-col items-center">
+            <h3 className="text-xl font-bold text-white mb-2">Connect {selectedOrg.name}</h3>
+            <p className="text-sm text-gray-400 mb-6 text-center">Scan this QR code from the WhatsApp app to link this tenant's session.</p>
+            
+            <div className="w-64 h-64 bg-white rounded-xl p-4 flex items-center justify-center mb-6 relative">
+              {qrData ? (
+                <QRCodeSVG value={qrData} size={224} />
+              ) : sessionStatus === "Connected" ? (
+                <div className="flex flex-col items-center text-emerald-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  <span className="mt-4 font-bold">Session Active</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-xs text-gray-500 font-medium">{sessionStatus}</p>
+                </div>
+              )}
+            </div>
+
+            <span className={`px-4 py-1.5 rounded-full text-xs font-bold border mb-8 ${
+              sessionStatus === 'Connected' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+              sessionStatus === 'Waiting for Scan' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+              'bg-gray-500/10 text-gray-400 border-gray-500/20'
+            }`}>
+              Status: {sessionStatus}
+            </span>
+
+            <button onClick={closeQRModal} className="px-6 py-2 border border-white/20 text-white rounded-lg hover:bg-white/5 transition-colors w-full">
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>

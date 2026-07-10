@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { io, Socket } from "socket.io-client";
 
 export default function WhatsAppIntegrationPage() {
   const [activeTab, setActiveTab] = useState<"official" | "experimental">("official");
@@ -44,7 +45,7 @@ export default function WhatsAppIntegrationPage() {
     }, 1000);
   };
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [qrData, setQrData] = useState<string | null>(null);
 
   const handleGenerateQR = () => {
@@ -52,43 +53,56 @@ export default function WhatsAppIntegrationPage() {
     setExperimentalStatus("Waiting for QR Scan");
     setQrData(null);
     
-    if (wsRef.current) {
-      wsRef.current.close();
+    if (socketRef.current) {
+      socketRef.current.disconnect();
     }
     
-    // Connect to WebSocket
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-    const wsUrl = apiUrl.replace(/^http/, 'ws') + '/api/v1/whatsapp/ws/qr';
+    // Connect to Node.js Baileys Microservice
+    const nodeUrl = process.env.NEXT_PUBLIC_NODE_URL || 'http://127.0.0.1:3001';
+    const socket = io(nodeUrl);
+    socketRef.current = socket;
     
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    // In a real app, this would be the actual org ID from the JWT or context
+    const currentOrgId = 1; 
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'status') {
-        if (data.message === 'Connected') {
+    socket.on("connect", () => {
+      socket.emit("start_session", { org_id: currentOrgId });
+    });
+
+    socket.on("status", (data: any) => {
+      if (data.org_id === currentOrgId) {
+        if (data.status === 'Connected') {
           setExperimentalStatus("Connected");
           setQrData(null);
-        } else if (data.message === 'Session Expired') {
+          setLoading(false);
+        } else if (data.status === 'Logged Out') {
+          setExperimentalStatus("Logged Out");
+          setLoading(false);
+        } else if (data.status === 'Session Expired') {
           setExperimentalStatus("Session Expired");
+          setLoading(false);
         } else {
           setExperimentalStatus("Waiting for QR Scan");
         }
-      } else if (data.type === 'qr_code') {
-        setQrData(data.data);
+      }
+    });
+
+    socket.on("qr_code", (data: any) => {
+      if (data.org_id === currentOrgId) {
+        setQrData(data.qr);
         setLoading(false);
       }
-    };
+    });
     
-    ws.onerror = () => {
+    socket.on("connect_error", () => {
       setLoading(false);
       setExperimentalStatus("Logged Out");
-    };
+    });
   };
 
   useEffect(() => {
     return () => {
-      if (wsRef.current) wsRef.current.close();
+      if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
 
