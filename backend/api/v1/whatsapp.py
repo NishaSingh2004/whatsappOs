@@ -5,6 +5,7 @@ from models.user import User
 from models.whatsapp import WhatsAppMember
 from api.deps import get_current_user
 from schemas.whatsapp import WebhookPayload, WhatsAppMemberResponse
+from core.ai_whatsapp import WhatsAppAIAssistant
 from datetime import datetime, timezone
 from typing import List
 
@@ -43,7 +44,7 @@ def get_whatsapp_members(db: Session = Depends(get_db), current_user: User = Dep
     return {"status": "success", "members": formatted_members}
 
 @router.post("/webhook")
-def whatsapp_webhook(payload: WebhookPayload, db: Session = Depends(get_db)):
+async def whatsapp_webhook(payload: WebhookPayload, db: Session = Depends(get_db)):
     """Receives messages from the Node.js Baileys service"""
     member = db.query(WhatsAppMember).filter(
         WhatsAppMember.org_id == payload.org_id,
@@ -72,5 +73,8 @@ def whatsapp_webhook(payload: WebhookPayload, db: Session = Depends(get_db)):
         member.profile_name = payload.profile_name
     db.commit()
 
-    return {"status": "success", "reply": None}
+    # Pass the message to the AI assistant
+    assistant = WhatsAppAIAssistant(db, payload.org_id, member.profile_name or "Employee")
+    ai_reply = await assistant.process_message(payload.message)
 
+    return {"status": "success", "reply": ai_reply}
