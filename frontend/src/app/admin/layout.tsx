@@ -50,6 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Dashboard", href: "/admin", icon: "home" },
     { name: "Organizations", href: "/admin/orgs", icon: "building" },
     { name: "Users", href: "/admin/users", icon: "users" },
+    { name: "WhatsApp Management", href: "/admin/whatsapp", icon: "message-circle" },
     { name: "Global Settings", href: "/admin/settings", icon: "settings" },
   ];
 

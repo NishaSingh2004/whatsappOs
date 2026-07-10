@@ -49,7 +49,8 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
   const allNavItems = [
     { name: "Overview", href: "/dashboard", roles: ["ORG_ADMIN", "MANAGER"] },
     { name: "Projects", href: "/dashboard/projects", roles: ["ORG_ADMIN", "MANAGER"] },
-    { name: "Team Chat", href: "/dashboard/chat", roles: ["ORG_ADMIN", "MANAGER", "EMPLOYEE"] },
+    { name: "WhatsApp", href: "/dashboard/whatsapp", roles: ["ORG_ADMIN", "MANAGER"] },
+    { name: "WhatsApp Members", href: "/dashboard/whatsapp-members", roles: ["ORG_ADMIN", "MANAGER", "EMPLOYEE"] },
     { name: "Tasks", href: "/dashboard/tasks", roles: ["ORG_ADMIN", "MANAGER", "EMPLOYEE"] },
     { name: "Settings", href: "/dashboard/settings", roles: ["ORG_ADMIN", "MANAGER"] },
   ];

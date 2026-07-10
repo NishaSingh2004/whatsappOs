@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from . import auth, chat, jira, orgs, projects, users, settings
+from . import auth, chat, jira, orgs, projects, users, settings, whatsapp
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -9,3 +9,4 @@ api_router.include_router(orgs.router, prefix="/orgs", tags=["orgs"])
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["whatsapp"])
